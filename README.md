@@ -1,12 +1,16 @@
 # Harga Emas Modern
 
-Aplikasi pantau harga emas real-time dengan UI Glassmorphism menggunakan Next.js.
+Clone modern dari harga-emas.org dengan desain yang lebih dekat dengan tampilan asli.
 
-## Cara Jalankan
+## Fitur
+- Navbar mirip asli
+- Kartu USD & IDR Spot
+- Tabel Antam & Pegadaian
+- Bagian UBS
+- Promo Pluang
 
+## Cara Menjalankan
 ```bash
 npm install
 npm run dev
 ```
-
-Deploy ke Vercel langsung dari GitHub.
