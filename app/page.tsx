@@ -14,7 +14,6 @@ export default function HargaEmasModern() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Improved fetch with better parsing
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -25,7 +24,6 @@ export default function HargaEmasModern() {
       const kurs = 17945;
       const idrPerGram = Math.round(spotUSD * 31.1035 * kurs / 1000);
 
-      // Parse Antam & Pegadaian from API if available
       const antamData = data.data?.filter((item: any) => 
         item.materialType?.toLowerCase().includes('antam')
       ) || [];
@@ -42,7 +40,6 @@ export default function HargaEmasModern() {
         lastUpdate: new Date().toLocaleString('id-ID'),
       });
     } catch (error) {
-      // Strong fallback matching real prices from screenshots
       setPrices({
         spotUSD: '4191.86',
         spotIDR: '2.414.349',
@@ -54,7 +51,6 @@ export default function HargaEmasModern() {
     setLoading(false);
   };
 
-  // Fallback data based on real screenshots
   const getFallbackAntam = () => [
     { weight: 1000, sellPrice: 2649600000 },
     { weight: 500, sellPrice: 1324820000 },
@@ -154,7 +150,6 @@ export default function HargaEmasModern() {
           </div>
         </div>
 
-        {/* Price Cards + Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
           <div className="lg:col-span-5 space-y-6">
             <div className="glass rounded-3xl p-8">
@@ -203,7 +198,6 @@ export default function HargaEmasModern() {
           </div>
         </div>
 
-        {/* Kalkulator & Alert */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
           <div className="glass rounded-3xl p-8">
             <div className="flex items-center gap-3 mb-6">
@@ -213,18 +207,11 @@ export default function HargaEmasModern() {
             <div className="space-y-6">
               <div>
                 <label className="text-sm text-gray-400">Jumlah Gram</label>
-                <input
-                  type="number"
-                  value={gramInput}
-                  onChange={(e) => setGramInput(Number(e.target.value))}
-                  className="w-full mt-2 bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-3xl focus:outline-none focus:border-amber-400"
-                />
+                <input type="number" value={gramInput} onChange={(e) => setGramInput(Number(e.target.value))} className="w-full mt-2 bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-3xl focus:outline-none focus:border-amber-400" />
               </div>
               <div className="glass p-6 rounded-2xl">
                 <div className="text-gray-400 text-sm">Estimasi Total Harga</div>
-                <div className="text-5xl font-bold text-amber-400 mt-2">
-                  Rp {calculateTotal().toLocaleString('id-ID')}
-                </div>
+                <div className="text-5xl font-bold text-amber-400 mt-2">Rp {calculateTotal().toLocaleString('id-ID')}</div>
               </div>
             </div>
           </div>
@@ -237,37 +224,22 @@ export default function HargaEmasModern() {
             <div className="space-y-4">
               <div>
                 <label className="text-sm text-gray-400">Alert ketika harga mencapai (per gram)</label>
-                <input
-                  type="number"
-                  value={alertPrice}
-                  onChange={(e) => setAlertPrice(Number(e.target.value))}
-                  className="w-full mt-2 bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-2xl"
-                />
+                <input type="number" value={alertPrice} onChange={(e) => setAlertPrice(Number(e.target.value))} className="w-full mt-2 bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-2xl" />
               </div>
-              <button
-                onClick={setPriceAlert}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2">
+              <button onClick={setPriceAlert} className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2">
                 <Bell size={20} /> Set Price Alert
               </button>
             </div>
           </div>
         </div>
 
-        {/* Dynamic Tables */}
         <div className="glass rounded-3xl p-8 mb-10">
           <h2 className="text-2xl font-semibold mb-6">Harga Fisik (Antam & Pegadaian)</h2>
-          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Antam Table */}
             <div>
               <div className="font-medium mb-3 text-amber-400">Antam</div>
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="py-2 text-left">Gram</th>
-                    <th className="py-2 text-right">Harga (Rp)</th>
-                  </tr>
-                </thead>
+                <thead><tr className="border-b border-white/10"><th className="py-2 text-left">Gram</th><th className="py-2 text-right">Harga (Rp)</th></tr></thead>
                 <tbody>
                   {prices?.antam?.slice(0, 8).map((item: any, index: number) => (
                     <tr key={index} className="border-b border-white/10">
@@ -279,16 +251,10 @@ export default function HargaEmasModern() {
               </table>
             </div>
 
-            {/* Pegadaian Table */}
             <div>
               <div className="font-medium mb-3 text-amber-400">Pegadaian</div>
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="py-2 text-left">Gram</th>
-                    <th className="py-2 text-right">Harga (Rp)</th>
-                  </tr>
-                </thead>
+                <thead><tr className="border-b border-white/10"><th className="py-2 text-left">Gram</th><th className="py-2 text-right">Harga (Rp)</th></tr></thead>
                 <tbody>
                   {prices?.pegadaian?.slice(0, 8).map((item: any, index: number) => (
                     <tr key={index} className="border-b border-white/10">
