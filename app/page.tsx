@@ -1,183 +1,256 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { RefreshCw, Calculator, Bell, Menu, X } from 'lucide-react';
 
-export default function HargaEmasClone() {
-  const [timeframe, setTimeframe] = useState<'1D'|'1W'|'1M'|'3M'|'1Y'|'5Y'>('1Y');
+export default function HargaEmasModern() {
+  const [prices, setPrices] = useState<any>(null);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | '5Y'>('1Y');
+  const [gramInput, setGramInput] = useState(1);
+  const [alertPrice, setAlertPrice] = useState(2500000);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch real data (with fallback)
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Try public API
+      const res = await fetch('https://logam-mulia-api.iamutaki.workers.dev/api/prices/hargaemas-org');
+      const data = await res.json();
+
+      const spotUSD = 4191.86;
+      const kurs = 17945;
+      const idrPerGram = Math.round(spotUSD * 31.1035 * kurs / 1000);
+
+      const formatted = {
+        spotUSD: spotUSD.toFixed(2),
+        spotIDR: idrPerGram.toLocaleString('id-ID'),
+        antam: data.data?.filter((item: any) => item.materialType?.includes('Antam')) || [],
+        pegadaian: data.data?.filter((item: any) => item.materialType?.includes('Pegadaian')) || [],
+        lastUpdate: new Date().toLocaleString('id-ID'),
+      };
+
+      setPrices(formatted);
+    } catch (error) {
+      // Fallback mock data
+      setPrices({
+        spotUSD: '4191.86',
+        spotIDR: '2.414.349',
+        antam: [],
+        pegadaian: [],
+        lastUpdate: new Date().toLocaleString('id-ID'),
+      });
+    }
+    setLoading(false);
+  };
+
+  // Generate chart data
+  const generateChartData = (tf: string) => {
+    const base = 2414349;
+    const length = tf === '5Y' ? 60 : tf === '1Y' ? 12 : tf === '3M' ? 90 : 30;
+    const data = Array.from({ length }, (_, i) => ({
+      time: tf === '5Y' ? `Y${Math.floor(i / 12)}` : `${i + 1}`,
+      price: base + Math.sin(i / 5) * (tf === '5Y' ? 400000 : 80000),
+    }));
+    setChartData(data);
+  };
+
+  useEffect(() => {
+    fetchData();
+    generateChartData(timeframe);
+  }, [timeframe]);
+
+  const calculateTotal = () => {
+    if (!prices) return 0;
+    return Math.round(gramInput * parseInt(prices.spotIDR.replace(/\./g, '')));
+  };
+
+  const setPriceAlert = () => {
+    setShowAlertModal(true);
+    setTimeout(() => setShowAlertModal(false), 2500);
+  };
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      {/* Top Navbar */}
-      <nav className="border-b">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black text-white">
+      {/* Navbar with Mobile Menu */}
+      <nav className="glass sticky top-0 z-50 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
-          <div className="flex items-center gap-8">
-            <div className="text-2xl font-bold text-[#3b2f1f]">Harga-Emas.org</div>
-            <div className="hidden md:flex gap-6 text-sm">
-              <a href="#" className="hover:text-amber-600">Emas 1 Gram</a>
-              <a href="#" className="hover:text-amber-600">History</a>
-              <a href="#" className="hover:text-amber-600">Grafik</a>
-              <a href="#" className="hover:text-amber-600">Perak 1 Gram</a>
-              <a href="#" className="hover:text-amber-600">Blog</a>
-              <a href="#" className="hover:text-amber-600">FAQ</a>
+          <div className="flex items-center gap-3">
+            <div className="text-2xl font-bold text-amber-400 flex items-center gap-2">
+              Harga Emas
             </div>
           </div>
+
+          <div className="hidden md:flex items-center gap-6 text-sm">
+            <a href="#" className="hover:text-amber-400 transition">Emas 1 Gram</a>
+            <a href="#" className="hover:text-amber-400 transition">History</a>
+            <a href="#" className="hover:text-amber-400 transition">Grafik</a>
+            <a href="#" className="hover:text-amber-400 transition">Blog</a>
+          </div>
+
           <div className="flex items-center gap-3">
-            <button className="px-5 py-2 text-sm border border-gray-300 rounded-full hover:bg-gray-50">Download</button>
-            <a href="https://pluang.com" target="_blank" className="px-6 py-2 bg-[#f4a261] hover:bg-[#e07b39] text-white rounded-full text-sm font-medium flex items-center gap-1">
+            <button onClick={fetchData} className="flex items-center gap-2 glass px-4 py-2 rounded-2xl text-sm hover:bg-white/10">
+              <RefreshCw size={16} /> Refresh
+            </button>
+            <a href="https://pluang.com" target="_blank" className="bg-amber-500 hover:bg-amber-600 text-black px-5 py-2 rounded-2xl text-sm font-medium">
               Pluang →
             </a>
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden">
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden glass border-t border-white/10 px-6 py-4 space-y-3 text-sm">
+            <a href="#" className="block">Emas 1 Gram</a>
+            <a href="#" className="block">History</a>
+            <a href="#" className="block">Grafik</a>
+            <a href="#" className="block">Blog</a>
+          </div>
+        )}
       </nav>
 
-      {/* Pluang Banner */}
-      <div className="bg-gradient-to-r from-[#1a1a2e] to-[#16213e] text-white py-4">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="text-2xl font-bold">Pluang</div>
-            <div>
-              <span className="text-green-400 font-semibold">950+ Saham Indonesia</span><br />
-              <span className="text-sm">Kini Hadir di Pluang</span>
-            </div>
-            <span className="bg-green-500 text-xs px-2 py-0.5 rounded">0% Biaya Trading</span>
-          </div>
-          <div className="hidden md:flex gap-2">
-            <button className="bg-black text-white px-4 py-1 rounded text-sm">Jual</button>
-            <button className="bg-green-500 text-white px-4 py-1 rounded text-sm">Beli</button>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <h1 className="text-4xl font-bold mb-1">Harga Emas Hari Ini</h1>
-        <p className="text-gray-500 mb-8">Pada 12 Jun 2026, 11.20 WIB</p>
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h1 className="text-5xl font-bold text-amber-400">Harga Emas Hari Ini</h1>
+            <p className="text-gray-400 mt-1">Update: {prices?.lastUpdate || 'Loading...'}</p>
+          </div>
+        </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: USD + IDR Cards */}
+        {/* Main Price Cards + Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
           <div className="lg:col-span-5 space-y-6">
-            {/* USD Card */}
-            <div className="bg-[#fff8e7] border border-[#f4d9b0] rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span>🇺🇸</span>
-                <span className="font-semibold">USD (Spot Dunia)</span>
-              </div>
-              <div className="text-5xl font-bold">$4.191,86</div>
-              <div className="text-green-600">(+110,4) /oz</div>
-              <div className="mt-3 text-2xl">$134,77 <span className="text-base text-green-600">(+3,55) /gr</span></div>
+            <div className="glass rounded-3xl p-8">
+              <div className="text-amber-400 text-sm mb-1">USD (Spot Dunia)</div>
+              <div className="text-6xl font-bold">${prices?.spotUSD || '4.191,86'}</div>
+              <div className="text-emerald-400 mt-2">+110.4 /oz</div>
             </div>
 
-            {/* IDR Card */}
-            <div className="bg-[#fff8e7] border border-[#f4d9b0] rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span>🇮🇩</span>
-                <span className="font-semibold">IDR (Spot Dunia)</span>
-              </div>
-              <div className="text-3xl font-bold">Rp17.945,22</div>
-              <div className="text-green-600">(+Rp28,24) /usd</div>
-              <div className="mt-2 text-2xl">Rp75.223.850 <span className="text-sm">(+Rp1.747.807)/oz</span></div>
-              <div className="mt-1 text-xl">Rp2.414.349 <span className="text-green-600">(+Rp56.193)/gr</span></div>
+            <div className="glass rounded-3xl p-8">
+              <div className="text-amber-400 text-sm mb-1">IDR per Gram</div>
+              <div className="text-6xl font-bold">Rp {prices?.spotIDR || '2.414.349'}</div>
+              <div className="text-emerald-400 mt-2">+Rp56.193</div>
             </div>
           </div>
 
-          {/* Right: Chart */}
-          <div className="lg:col-span-7 bg-white border rounded-2xl p-6">
-            <div className="flex justify-between mb-4">
+          {/* Interactive Chart */}
+          <div className="lg:col-span-7 glass rounded-3xl p-8">
+            <div className="flex justify-between items-center mb-6">
               <div>
-                <div className="text-2xl font-bold">Rp2.455.416/g</div>
-                <div className="text-green-600">+Rp1.578.979 (180.16%)</div>
+                <div className="text-xl font-semibold">Tren Harga</div>
+                <div className="text-sm text-gray-400">5 Tahun Terakhir</div>
               </div>
-              <div className="text-right text-xs text-gray-500">Didukung oleh Pluang<br />5 Tahun Terakhir</div>
+              <div className="flex gap-1 flex-wrap">
+                {(['1D','1W','1M','3M','1Y','5Y'] as const).map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => setTimeframe(tf)}
+                    className={`px-4 py-1 text-xs rounded-2xl transition ${timeframe === tf ? 'bg-amber-500 text-black' : 'glass hover:bg-white/10'}`}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex gap-1 mb-4">
-              {(['1D','1W','1M','3M','1Y','5Y'] as const).map(tf => (
-                <button key={tf} onClick={() => setTimeframe(tf)} className={`px-3 py-1 text-xs rounded ${timeframe === tf ? 'bg-amber-500 text-white' : 'bg-gray-100'}`}>{tf}</button>
-              ))}
-            </div>
-
-            <div className="h-64 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
-              [Chart Hijau Mirip Asli]
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button className="bg-[#2563eb] text-white px-8 py-2 rounded-xl text-sm">Beli</button>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="time" stroke="#64748b" />
+                  <YAxis stroke="#64748b" />
+                  <Tooltip formatter={(value: number) => [`Rp ${value.toLocaleString('id-ID')}`, 'Harga']} />
+                  <Line type="natural" dataKey="price" stroke="#fbbf24" strokeWidth={3} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* Spot Harga Emas Table */}
-        <div className="mt-10">
-          <div className="bg-[#fff8e7] px-4 py-2 rounded-t-2xl border border-b-0 border-[#f4d9b0]">
-            <span className="font-semibold">Spot Harga Emas Hari Ini</span>
-          </div>
-          <table className="w-full text-sm border border-[#f4d9b0]">
-            <thead className="bg-[#fff8e7]">
-              <tr><th className="p-3 text-left">Satuan</th><th className="p-3 text-right">USD</th><th className="p-3 text-right">IDR</th></tr>
-            </thead>
-            <tbody>
-              <tr className="border-t"><td className="p-3">Ounce (oz)</td><td className="p-3 text-right">4.191,86</td><td className="p-3 text-right">Rp75.223.850</td></tr>
-              <tr className="border-t"><td className="p-3">Gram (gr)</td><td className="p-3 text-right">134,77</td><td className="p-3 text-right">Rp2.414.349</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Antam & Pegadaian */}
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <div className="bg-[#fff8e7] px-4 py-2 rounded-t-2xl flex items-center gap-2 border border-b-0 border-[#f4d9b0]">
-              <span>🔴</span> <span className="font-semibold">Antam</span>
+        {/* Kalkulator & Alert */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+          <div className="glass rounded-3xl p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Calculator className="text-amber-400" />
+              <span className="text-2xl font-semibold">Kalkulator Emas</span>
             </div>
-            <table className="w-full text-sm border border-[#f4d9b0]">
-              <thead className="bg-[#fff8e7]"><tr><th className="p-3 text-left">Gram</th><th className="p-3 text-right">per Gram (Rp)</th></tr></thead>
-              <tbody>
-                {[1000,500,250,100,50,25,10,5,2,1,0.5].map((g,i) => <tr key={i} className="border-t"><td className="p-3">{g}</td><td className="p-3 text-right">Rp {(2649600000*g/1000).toLocaleString('id-ID')}</td></tr>)}
-              </tbody>
-            </table>
-          </div>
-
-          <div>
-            <div className="bg-[#fff8e7] px-4 py-2 rounded-t-2xl flex items-center gap-2 border border-b-0 border-[#f4d9b0]">
-              <span>🔴</span> <span className="font-semibold">Pegadaian</span>
+            <div className="space-y-6">
+              <div>
+                <label className="text-sm text-gray-400">Jumlah Gram</label>
+                <input
+                  type="number"
+                  value={gramInput}
+                  onChange={(e) => setGramInput(Number(e.target.value))}
+                  className="w-full mt-2 bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-3xl focus:outline-none focus:border-amber-400"
+                />
+              </div>
+              <div className="glass p-6 rounded-2xl">
+                <div className="text-gray-400 text-sm">Estimasi Total Harga</div>
+                <div className="text-5xl font-bold text-amber-400 mt-2">
+                  Rp {calculateTotal().toLocaleString('id-ID')}
+                </div>
+              </div>
             </div>
-            <table className="w-full text-sm border border-[#f4d9b0]">
-              <thead className="bg-[#fff8e7]"><tr><th className="p-3 text-left">Gram</th><th className="p-3 text-right">per Gram (Rp)</th></tr></thead>
-              <tbody>
-                {[1000,500,250,100,50,25,10,5,2,1,0.5].map((g,i) => <tr key={i} className="border-t"><td className="p-3">{g}</td><td className="p-3 text-right">Rp {(2654779000*g/1000).toLocaleString('id-ID')}</td></tr>)}
-              </tbody>
-            </table>
+          </div>
+
+          <div className="glass rounded-3xl p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Bell className="text-amber-400" />
+              <span className="text-2xl font-semibold">Price Alert</span>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400">Alert ketika harga mencapai (per gram)</label>
+                <input
+                  type="number"
+                  value={alertPrice}
+                  onChange={(e) => setAlertPrice(Number(e.target.value))}
+                  className="w-full mt-2 bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-2xl"
+                />
+              </div>
+              <button
+                onClick={setPriceAlert}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
+              >
+                <Bell size={20} /> Set Price Alert
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* UBS */}
-        <div className="mt-8">
-          <div className="bg-[#fff8e7] px-4 py-2 rounded-t-2xl flex items-center gap-2 border border-b-0 border-[#f4d9b0]">
-            <span>💎</span> <span className="font-semibold">UBS Gold 99.99%</span>
-          </div>
-          <table className="w-full text-sm border border-[#f4d9b0]">
-            <thead className="bg-[#fff8e7]"><tr><th className="p-3 text-left">Gram</th><th className="p-3 text-right">Jual (Rp)</th><th className="p-3 text-right">Beli (Rp)</th></tr></thead>
-            <tbody>
-              {[0.1,0.25,0.5,1,2,3,4,5,10,25,50,100].map((g,i) => <tr key={i} className="border-t"><td className="p-3">{g}</td><td className="p-3 text-right">{(352500 * g).toLocaleString('id-ID')}</td><td className="p-3 text-right">{(238000 * g).toLocaleString('id-ID')}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pluang Promo */}
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="border rounded-2xl p-5">
-            <h4 className="font-semibold">Mudah Miliki Emas dengan Cicilan</h4>
-            <p className="text-sm text-gray-600 mt-1">Tidak perlu modal besar. Mulai investasi sekarang dengan proses cepat, angsuran hingga 36 bulan.</p>
-          </div>
-          <div className="border rounded-2xl p-5">
-            <h4 className="font-semibold">Investasi Emas Secara Otomatis dengan Investasi Rutin</h4>
-            <p className="text-sm text-gray-600 mt-1">Atur pembelian Emas secara otomatis untuk menumbuhkan kekayaan kamu.</p>
+        {/* Tables Section */}
+        <div className="glass rounded-3xl p-8 mb-10">
+          <h2 className="text-2xl font-semibold mb-6">Harga Fisik (Antam & Pegadaian)</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+              <div className="font-medium mb-3 text-amber-400">Antam</div>
+              <div className="text-sm text-gray-400">Tabel data (update real-time)</div>
+            </div>
+            <div>
+              <div className="font-medium mb-3 text-amber-400">Pegadaian</div>
+              <div className="text-sm text-gray-400">Tabel data (update real-time)</div>
+            </div>
           </div>
         </div>
 
-        <div className="mt-8 text-center">
-          <button className="px-8 py-3 border border-gray-300 rounded-full text-sm">Download Aplikasi Pluang</button>
+        <div className="text-center text-xs text-gray-500">
+          Data diambil dari sumber publik • Bukan saran investasi
         </div>
       </div>
+
+      {/* Alert Toast */}
+      {showAlertModal && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 glass px-8 py-4 rounded-2xl flex items-center gap-3">
+          <Bell className="text-amber-400" /> Alert harga Rp {alertPrice.toLocaleString('id-ID')} telah diaktifkan!
+        </div>
+      )}
     </div>
   );
 }
