@@ -14,11 +14,10 @@ export default function HargaEmasModern() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Fetch real data (with fallback)
+  // Improved fetch with better parsing
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Try public API
       const res = await fetch('https://logam-mulia-api.iamutaki.workers.dev/api/prices/hargaemas-org');
       const data = await res.json();
 
@@ -26,34 +25,69 @@ export default function HargaEmasModern() {
       const kurs = 17945;
       const idrPerGram = Math.round(spotUSD * 31.1035 * kurs / 1000);
 
-      const formatted = {
+      // Parse Antam & Pegadaian from API if available
+      const antamData = data.data?.filter((item: any) => 
+        item.materialType?.toLowerCase().includes('antam')
+      ) || [];
+
+      const pegadaianData = data.data?.filter((item: any) => 
+        item.materialType?.toLowerCase().includes('pegadaian')
+      ) || [];
+
+      setPrices({
         spotUSD: spotUSD.toFixed(2),
         spotIDR: idrPerGram.toLocaleString('id-ID'),
-        antam: data.data?.filter((item: any) => item.materialType?.includes('Antam')) || [],
-        pegadaian: data.data?.filter((item: any) => item.materialType?.includes('Pegadaian')) || [],
+        antam: antamData.length > 0 ? antamData : getFallbackAntam(),
+        pegadaian: pegadaianData.length > 0 ? pegadaianData : getFallbackPegadaian(),
         lastUpdate: new Date().toLocaleString('id-ID'),
-      };
-
-      setPrices(formatted);
+      });
     } catch (error) {
-      // Fallback mock data
+      // Strong fallback matching real prices from screenshots
       setPrices({
         spotUSD: '4191.86',
         spotIDR: '2.414.349',
-        antam: [],
-        pegadaian: [],
+        antam: getFallbackAntam(),
+        pegadaian: getFallbackPegadaian(),
         lastUpdate: new Date().toLocaleString('id-ID'),
       });
     }
     setLoading(false);
   };
 
-  // Generate chart data
+  // Fallback data based on real screenshots
+  const getFallbackAntam = () => [
+    { weight: 1000, sellPrice: 2649600000 },
+    { weight: 500, sellPrice: 1324820000 },
+    { weight: 250, sellPrice: 662515000 },
+    { weight: 100, sellPrice: 265112000 },
+    { weight: 50, sellPrice: 132595000 },
+    { weight: 25, sellPrice: 66337000 },
+    { weight: 10, sellPrice: 27590000 },
+    { weight: 5, sellPrice: 14293000 },
+    { weight: 2, sellPrice: 5358000 },
+    { weight: 1, sellPrice: 2859000 },
+    { weight: 0.5, sellPrice: 1474500 },
+  ];
+
+  const getFallbackPegadaian = () => [
+    { weight: 1000, sellPrice: 2654779000 },
+    { weight: 500, sellPrice: 1327390000 },
+    { weight: 250, sellPrice: 663695000 },
+    { weight: 100, sellPrice: 266133000 },
+    { weight: 50, sellPrice: 133132000 },
+    { weight: 25, sellPrice: 66618000 },
+    { weight: 10, sellPrice: 26792000 },
+    { weight: 5, sellPrice: 13432000 },
+    { weight: 2, sellPrice: 5412000 },
+    { weight: 1, sellPrice: 2739000 },
+    { weight: 0.5, sellPrice: 1437000 },
+  ];
+
   const generateChartData = (tf: string) => {
     const base = 2414349;
     const length = tf === '5Y' ? 60 : tf === '1Y' ? 12 : tf === '3M' ? 90 : 30;
     const data = Array.from({ length }, (_, i) => ({
-      time: tf === '5Y' ? `Y${Math.floor(i / 12)}` : `${i + 1}`,
+      time: tf === '5Y' ? `Y${Math.floor(i/12)}` : `${i+1}`,
       price: base + Math.sin(i / 5) * (tf === '5Y' ? 400000 : 80000),
     }));
     setChartData(data);
@@ -76,13 +110,10 @@ export default function HargaEmasModern() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black text-white">
-      {/* Navbar with Mobile Menu */}
       <nav className="glass sticky top-0 z-50 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <div className="text-2xl font-bold text-amber-400 flex items-center gap-2">
-              Harga Emas
-            </div>
+            <div className="text-2xl font-bold text-amber-400">Harga Emas</div>
           </div>
 
           <div className="hidden md:flex items-center gap-6 text-sm">
@@ -105,7 +136,6 @@ export default function HargaEmasModern() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden glass border-t border-white/10 px-6 py-4 space-y-3 text-sm">
             <a href="#" className="block">Emas 1 Gram</a>
@@ -124,7 +154,7 @@ export default function HargaEmasModern() {
           </div>
         </div>
 
-        {/* Main Price Cards + Chart */}
+        {/* Price Cards + Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
           <div className="lg:col-span-5 space-y-6">
             <div className="glass rounded-3xl p-8">
@@ -140,7 +170,6 @@ export default function HargaEmasModern() {
             </div>
           </div>
 
-          {/* Interactive Chart */}
           <div className="lg:col-span-7 glass rounded-3xl p-8">
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -217,25 +246,58 @@ export default function HargaEmasModern() {
               </div>
               <button
                 onClick={setPriceAlert}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2"
-              >
+                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-2">
                 <Bell size={20} /> Set Price Alert
               </button>
             </div>
           </div>
         </div>
 
-        {/* Tables Section */}
+        {/* Dynamic Tables */}
         <div className="glass rounded-3xl p-8 mb-10">
           <h2 className="text-2xl font-semibold mb-6">Harga Fisik (Antam & Pegadaian)</h2>
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Antam Table */}
             <div>
               <div className="font-medium mb-3 text-amber-400">Antam</div>
-              <div className="text-sm text-gray-400">Tabel data (update real-time)</div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="py-2 text-left">Gram</th>
+                    <th className="py-2 text-right">Harga (Rp)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {prices?.antam?.slice(0, 8).map((item: any, index: number) => (
+                    <tr key={index} className="border-b border-white/10">
+                      <td className="py-2">{item.weight} gram</td>
+                      <td className="py-2 text-right font-medium">Rp {item.sellPrice?.toLocaleString('id-ID')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+
+            {/* Pegadaian Table */}
             <div>
               <div className="font-medium mb-3 text-amber-400">Pegadaian</div>
-              <div className="text-sm text-gray-400">Tabel data (update real-time)</div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="py-2 text-left">Gram</th>
+                    <th className="py-2 text-right">Harga (Rp)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {prices?.pegadaian?.slice(0, 8).map((item: any, index: number) => (
+                    <tr key={index} className="border-b border-white/10">
+                      <td className="py-2">{item.weight} gram</td>
+                      <td className="py-2 text-right font-medium">Rp {item.sellPrice?.toLocaleString('id-ID')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -245,7 +307,6 @@ export default function HargaEmasModern() {
         </div>
       </div>
 
-      {/* Alert Toast */}
       {showAlertModal && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 glass px-8 py-4 rounded-2xl flex items-center gap-3">
           <Bell className="text-amber-400" /> Alert harga Rp {alertPrice.toLocaleString('id-ID')} telah diaktifkan!
